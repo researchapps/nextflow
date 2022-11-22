@@ -129,17 +129,18 @@ class FluxExecutor extends AbstractGridExecutor {
     protected List<String> queueStatusCommand(Object queue) {
 
         // Look at jobs from last 15 minutes
-        final result = ['flux', 'jobs', '--suppress-header', '--format="{id.f58} {status_abbrev}"', '--since="-15m"']
+        String command = 'flux jobs --suppress-header --format="{id.f58} {status_abbrev}" --since="-15m"'
 
         if( queue )
-            result << '--queue' << queue.toString()
+            command += ' --queue=' + queue.toString()
 
         final user = System.getProperty('user.name')
         if( user )
-            result << '--user' << user
+            command += ' --user=' + user
         else
             log.debug "Cannot retrieve current user"
 
+        final result = ['sh', '-c', command]
         return result
     }
 

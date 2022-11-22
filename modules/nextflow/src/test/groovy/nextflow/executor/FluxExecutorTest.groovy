@@ -144,7 +144,7 @@ class FluxExecutorTest extends Specification {
         def executor = [:] as FluxExecutor
         then:
         usr
-        executor.queueStatusCommand(null) == ['flux', 'jobs', '--suppress-header', '--format="{id.f58} {status_abbrev}"', '--since="-15m"', '--user', usr]
-        executor.queueStatusCommand('xxx') == ['flux', 'jobs', '--suppress-header', '--format="{id.f58} {status_abbrev}"', '--since="-15m"', '--queue', 'xxx', '--user', usr]
+        executor.queueStatusCommand(null) == ['sh', '-c', "flux jobs --suppress-header --format=\"{id.f58} {status_abbrev}\" --since=\"-15m\" --user=" + usr]
+        executor.queueStatusCommand('xxx') == ['sh', '-c', "flux jobs --suppress-header --format=\"{id.f58} {status_abbrev}\" --since=\"-15m\" --queue=xxx --user=" + usr]
     }
 }
