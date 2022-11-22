@@ -61,7 +61,30 @@ class FluxExecutor extends AbstractGridExecutor {
         List<String> result = ['flux', 'mini', 'submit']
         result << '--setattr=cwd=' + quote(task.workDir)
         result << '--job-name="' + getJobNameFor(task) + '"'
-        result << '--output=' + quote(task.workDir.resolve(TaskRun.CMD_LOG))  // -o OUTFILE
+ 
+        // Incrementally save additional cluster options, and special arguments for output
+        Boolean terminal_output = false
+        List<String> clusterOptions = []
+
+        // Look for special option hidden in cluster options to not set output
+        if( task.config.clusterOptions ) {
+            for (String item : task.config.clusterOptions.toString().tokenize(' ')) {
+                if ( item ) {
+                    if ( item.stripIndent().trim() == "--terminal-output" ) {
+                        terminal_output = true
+
+                    // Otherwise add to list of cluster options
+                    } else {
+                        clusterOptions << item.stripIndent().trim()                  
+                    }
+                }
+            }
+        }
+
+        // Only write output to file if user doesn't want written entirely to terminal
+        if ( !terminal_output ) {
+            result << '--output=' + quote(task.workDir.resolve(TaskRun.CMD_LOG))  // -o OUTFILE
+        }
 
         if( task.config.cpus > 1 ) {
             result << '--cores-per-task=' + task.config.cpus.toString()
@@ -82,16 +105,9 @@ class FluxExecutor extends AbstractGridExecutor {
             result << '--queue=' + (task.config.queue.toString())
         }
 
-        // Any extra cluster options the user wants!
-        // Options tokenized with ; akin to OarExecutor
-        if( task.config.clusterOptions ) {
-
-            // Split by space
-            for (String item : task.config.clusterOptions.toString().tokenize(' ')) {
-                if ( item ) {
-                    result << item.stripIndent().trim()
-                }
-            }
+        // Add cluster options to result list
+        for (String item : clusterOptions) {
+            result << item 
         }
         result << '/bin/bash' << scriptFile.getName()
         return result
@@ -129,17 +145,18 @@ class FluxExecutor extends AbstractGridExecutor {
     protected List<String> queueStatusCommand(Object queue) {
 
         // Look at jobs from last 15 minutes
-        final result = ['flux', 'jobs', '--suppress-header', '--format="{id.f58} {status_abbrev}"', '--since="-15m"']
+        String command = 'flux jobs --suppress-header --format="{id.f58} {status_abbrev}" --since="-15m"'
 
         if( queue )
-            result << '--queue' << queue.toString()
+            command += ' --queue=' + queue.toString()
 
         final user = System.getProperty('user.name')
         if( user )
-            result << '--user' << user
+            command += ' --user=' + user
         else
             log.debug "Cannot retrieve current user"
 
+        final result = ['sh', '-c', command]
         return result
     }
 
